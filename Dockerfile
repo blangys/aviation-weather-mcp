@@ -1,26 +1,19 @@
-# Use Node.js 22 Alpine image for smaller size
-FROM node:22-alpine
-
-# Set working directory
+# Build stage
+FROM node:22-alpine AS builder
 WORKDIR /app
-
-# Copy package files
 COPY package*.json ./
+RUN npm ci
+COPY tsconfig.json ./
+COPY src ./src
+RUN npm run build
 
-# Install production dependencies only
+# Production stage
+FROM node:22-alpine
+WORKDIR /app
+COPY package*.json ./
 RUN npm ci --only=production
-
-# Copy source code
-COPY dist ./dist
-
-# Expose port
+COPY --from=builder /app/dist ./dist
 EXPOSE 3000
-
-# Set environment to production
 ENV NODE_ENV=production
-
-# Run as non-root user
 USER node
-
-# Start the server
 CMD ["node", "dist/index.js"]
